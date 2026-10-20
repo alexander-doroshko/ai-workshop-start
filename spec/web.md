@@ -1,0 +1,14 @@
+# Web view
+`./skill-atlas serve [--port <port>]`: a page on **localhost** (port 4173 by default).
+Scans the same inputs as the CLI; *nothing is stored*. Listed by `help`; the browser terminal: *Node CLI only*.
+- Only for a Host of `127.0.0.1:<port>` or `localhost:<port>`; any other → **403** (DNS rebinding)
+## Page
+- A field for the repository, the **Scan** button to its right
+- On the left, the skills, sorted by **name**, each with its description
+- Select one → its **SKILL.md** on the right, with the pinned link and `also in <paths>` for copies
+- The skills of [analysis.md](analysis.md#a-project-skill): a skill in several roots is *one item*
+- The repository and the skill count above; warnings *under them*, the scan goes on
+- Unreachable repository → the CLI's message, *no list*
+## API
+`GET /api/scan?repo=<GitHub URL | directory>` → `{ repository, skills, warnings }`;
+each skill with its `link` and `text`. A failure → `{ error }`, status 400.

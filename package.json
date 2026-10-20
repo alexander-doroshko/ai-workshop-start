@@ -19,6 +19,7 @@
   },
   "devDependencies": {
     "@types/node": "^24.19.0",
+    "linkedom": "^0.18.13",
     "typescript": "^7.0.2"
   }
 }

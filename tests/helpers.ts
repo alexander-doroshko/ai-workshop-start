@@ -60,13 +60,16 @@ function EDGE_CASES(): Recording {
 
 const github = replay(EXAMPLE);
 
+/** What to scan, as the CLI opens it, with GitHub answering from EXAMPLE through code search. */
+export const open = (input: string) =>
+  parseGitHubUrl(input) ? openGitHub(input, { fetch: github, token: 'test' }) : openDirectory(input);
+
 /** `skill-atlas <args>`, as the CLI runs it, with GitHub answering from EXAMPLE. */
 export async function atlas(args: string[]) {
   const stdout: string[] = [];
   const stderr: string[] = [];
   const code = await run(args, {
-    // With a token, through code search, as EXAMPLE answers it.
-    open: (input) => (parseGitHubUrl(input) ? openGitHub(input, { fetch: github, token: 'test' }) : openDirectory(input)),
+    open,
     print: (text) => stdout.push(text),
     error: (text) => stderr.push(text),
   });
