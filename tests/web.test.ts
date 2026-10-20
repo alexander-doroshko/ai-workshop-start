@@ -12,14 +12,14 @@ import { parseHTML } from 'linkedom';
 import { createBrowserBackend } from '../src/browser.ts';
 import { start } from '../src/web/page.js';
 import { serve } from '../src/web.ts';
-import { atlas, CLI, EXAMPLE_COMMIT, FIXTURE, open } from './helpers.ts';
+import { atlas, CLI, EXAMPLE_COMMIT, FIXTURE, OCTO_COMMIT, open } from './helpers.ts';
 
 const { server, url } = await serve({ open, port: 0 });
 after(() => server.close());
 
 type Answer = {
   repository: { id: string };
-  skills: { name: string; path: string; link: string; text: string; copies: string[] }[];
+  skills: { name: string; repository: string; path: string; link: string; text: string; copies: string[] }[];
   warnings: string[];
   error?: string;
 };
@@ -43,6 +43,8 @@ async function page() {
     isError: () => element('status').classList.contains('error'),
     /** The list on the left, as shown: the items the filter hides left out. */
     names: () => items().filter((item) => !item.hasAttribute('hidden')).map((item) => item.querySelector('.name')!.textContent),
+    /** The repository under each name: an organization's skills only. */
+    repositories: () => items().flatMap((item) => [...item.querySelectorAll('.repository')].map((element) => element.textContent)),
     /** What the right side shows. */
     view: () => ({
       link: element('skill').querySelector('a')?.getAttribute('href'),
@@ -165,6 +167,53 @@ test('the page: unreachable repository → the CLI message, no list; the previou
   assert.equal(shown.isError(), true);
   assert.deepEqual(shown.names(), []);
   assert.deepEqual(shown.view(), { link: undefined, copies: undefined, text: undefined });
+});
+
+test('the page, an organization: all its skills by name, each with its repository; the counts above', async () => {
+  const shown = await page();
+  await shown.scan('https://github.com/JetBrains');
+  assert.equal(shown.status(), 'JetBrains · 4 repositories · 4 skills');
+  assert.equal(shown.isError(), false);
+  assert.deepEqual(shown.names(), ['commits', 'mps-tests', 'upstream', 'writing-lint-checks']);
+  assert.deepEqual(shown.repositories(), ['JetBrains/example', 'JetBrains/edge-cases', 'JetBrains/forked', 'JetBrains/edge-cases']);
+  shown.select('mps-tests');
+  assert.deepEqual(shown.view(), {
+    link: `https://github.com/JetBrains/edge-cases/blob/${EXAMPLE_COMMIT}/.agents/skills/mps-tests/SKILL.md`,
+    copies: 'also in .claude/skills/mps-tests/SKILL.md',
+    text: '---\nname: mps-tests\ndescription: Run the MPS tests. Use before every push.\n---\n',
+  });
+});
+
+test('the page, a repository: no repository on the items', async () => {
+  const shown = await page();
+  await shown.scan(FIXTURE);
+  assert.deepEqual(shown.repositories(), []);
+});
+
+test('an organization: its skills with their repositories and pinned links, and the repository count', async () => {
+  const response = await scanned('https://github.com/JetBrains');
+  assert.equal(response.status, 200);
+  const result = (await response.json()) as unknown as Omit<Answer, 'repository'> & { organization: { id: string; url: string }; repositories: number };
+  assert.deepEqual(result.organization, { id: 'JetBrains', url: 'https://github.com/JetBrains' });
+  assert.equal(result.repositories, 4);
+  assert.deepEqual(result.warnings, []);
+  assert.deepEqual(
+    result.skills.map(({ name, repository, link }) => ({ name, repository, link })),
+    [
+      { name: 'commits', repository: 'JetBrains/example', link: `https://github.com/JetBrains/example/blob/${EXAMPLE_COMMIT}/.claude/skills/commits/SKILL.md` },
+      { name: 'mps-tests', repository: 'JetBrains/edge-cases', link: `https://github.com/JetBrains/edge-cases/blob/${EXAMPLE_COMMIT}/.agents/skills/mps-tests/SKILL.md` },
+      { name: 'upstream', repository: 'JetBrains/forked', link: `https://github.com/JetBrains/forked/blob/${OCTO_COMMIT}/.github/skills/upstream/SKILL.md` },
+      {
+        name: 'writing-lint-checks',
+        repository: 'JetBrains/edge-cases',
+        link: `https://github.com/JetBrains/edge-cases/blob/${EXAMPLE_COMMIT}/agent/skills/writing-lint-checks/SKILL.md`,
+      },
+    ],
+  );
+
+  const missing = await scanned('https://github.com/no-such-organization');
+  assert.equal(missing.status, 400);
+  assert.deepEqual(await missing.json(), { error: 'Organization not found: https://github.com/no-such-organization' });
 });
 
 test('a GitHub repository: its skills with the SKILL.md text and the pinned link', async () => {

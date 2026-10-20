@@ -11,7 +11,7 @@ import { test } from 'node:test';
 import { openGitHub } from '../src/core/github.ts';
 import { parseSkill } from '../src/core/parse.ts';
 import { replay } from '../src/core/replay.ts';
-import { atlas, CLI, EXAMPLE_COMMIT, FIXTURE } from './helpers.ts';
+import { atlas, CLI, EXAMPLE_COMMIT, FIXTURE, OCTO_COMMIT } from './helpers.ts';
 
 const fixture = await atlas(['scan', FIXTURE]);
 const example = await atlas(['scan', 'github.com/JetBrains/example']);
@@ -123,6 +123,78 @@ test('rate limit → a message that asks for GITHUB_TOKEN', async () => {
     },
   });
   await assert.rejects(openGitHub('https://github.com/JetBrains/MPS', { fetch: limited }), {
+    message: 'GitHub rate limit reached; set GITHUB_TOKEN',
+  });
+});
+
+const organization = await atlas(['scan', 'https://github.com/JetBrains']);
+
+test('an organization: the repositories scanned and all their skills, then each repository with skills', () => {
+  assert.equal(organization.code, 0, organization.stderr);
+  assert.equal(organization.stderr, '');
+  assert.equal(
+    organization.stdout,
+    [
+      'JetBrains · 4 repositories · 4 skills',
+      'JetBrains/edge-cases · 2 skills',
+      'mps-tests — Run the MPS tests.',
+      `  https://github.com/JetBrains/edge-cases/blob/${EXAMPLE_COMMIT}/.agents/skills/mps-tests/SKILL.md`,
+      '  also in .claude/skills/mps-tests/SKILL.md',
+      'writing-lint-checks — Write a lint check the way this repository does.',
+      `  https://github.com/JetBrains/edge-cases/blob/${EXAMPLE_COMMIT}/agent/skills/writing-lint-checks/SKILL.md`,
+      'JetBrains/example · 1 skill',
+      'commits — Write commit messages the way this repository does.',
+      `  https://github.com/JetBrains/example/blob/${EXAMPLE_COMMIT}/.claude/skills/commits/SKILL.md`,
+      'JetBrains/forked · 1 skill',
+      'upstream — A skill the fork keeps from upstream.',
+      `  https://github.com/JetBrains/forked/blob/${OCTO_COMMIT}/.github/skills/upstream/SKILL.md`,
+    ].join('\n'),
+  );
+});
+
+test('an organization, with a token: a fork is listed through its tree, code search leaves forks out', () => {
+  assert.match(organization.stdout, /^upstream — /m);
+  assert.doesNotMatch(organization.stdout, /not-in-the-fork/);
+});
+
+test("a user's account, without a token: each repository through its tree; one that cannot be scanned → a warning, the scan goes on", async () => {
+  const user = await atlas(['scan', 'github.com/octo/'], { token: undefined });
+  assert.equal(user.code, 0, user.stderr);
+  assert.equal(
+    user.stdout,
+    [
+      'octo · 2 repositories · 1 skill',
+      'octo/skills · 1 skill',
+      'review',
+      `  https://github.com/octo/skills/blob/${OCTO_COMMIT}/.claude/skills/review/SKILL.md`,
+    ].join('\n'),
+  );
+  assert.equal(
+    user.stderr,
+    [
+      'warning: octo/empty: skipped: GitHub answered 409 for https://api.github.com/repos/octo/empty/commits/main: Git Repository is empty.',
+      'warning: octo/skills: .claude/skills/review/SKILL.md: no front matter; using the directory name',
+    ].join('\n'),
+  );
+});
+
+test('unknown organization → a clear message, exit code 1', async () => {
+  const missing = await atlas(['scan', 'https://github.com/no-such-organization']);
+  assert.equal(missing.code, 1);
+  assert.equal(missing.stderr, 'Organization not found: https://github.com/no-such-organization');
+  assert.equal(missing.stdout, '');
+});
+
+test('an organization: the rate limit stops the whole scan', async () => {
+  const limited = replay({
+    'https://api.github.com/users/JetBrains': { status: 200, body: { login: 'JetBrains', type: 'Organization' } },
+    'https://api.github.com/orgs/JetBrains/repos?per_page=100&page=1': {
+      status: 200,
+      body: [{ full_name: 'JetBrains/MPS', default_branch: 'master', fork: false }],
+    },
+    'https://api.github.com/repos/JetBrains/MPS/commits/master': { status: 403, body: { message: 'API rate limit exceeded for 192.0.2.1.' } },
+  });
+  await assert.rejects(openGitHub('https://github.com/JetBrains', { fetch: limited }), {
     message: 'GitHub rate limit reached; set GITHUB_TOKEN',
   });
 });

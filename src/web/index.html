@@ -21,6 +21,7 @@
   #skills li:hover { background: #8881; }
   #skills li[aria-selected="true"] { background: color-mix(in srgb, var(--accent) 20%, transparent); }
   #skills .name { font-weight: 600; }
+  #skills .repository { font-size: 12px; }
   #skills .description { color: var(--muted); font-size: 12px; }
   #skill { flex: 1; overflow: auto; padding: 12px 16px; }
   #skill a { font-size: 12px; color: var(--accent); word-break: break-all; }
@@ -30,7 +31,7 @@
 </head>
 <body>
 <form id="scan">
-  <input id="repo" name="repo" placeholder="https://github.com/owner/repo or a directory" autofocus required>
+  <input id="repo" name="repo" placeholder="https://github.com/owner/repo, https://github.com/organization or a directory" autofocus required>
   <button type="submit">Scan</button>
 </form>
 <div id="status">Enter a repository and press Scan.</div>
