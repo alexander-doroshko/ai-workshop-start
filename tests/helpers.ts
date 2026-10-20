@@ -23,7 +23,40 @@ const EXAMPLE: Recording = {
     status: 200,
     body: '---\nname: commits\ndescription: Write commit messages the way this repository does. Use for every commit.\n---\n# Commits\n',
   },
+  ...EDGE_CASES(),
 };
+
+/**
+ * JetBrains/edge-cases: where skills live in real repositories. Only the main copies of
+ * the project's own skills are answered: reading anything else fails the scan.
+ */
+function EDGE_CASES(): Recording {
+  const search = 'https://api.github.com/search/code?q=filename:SKILL.md+repo:JetBrains/edge-cases&per_page=100&page=1';
+  const raw = `https://raw.githubusercontent.com/JetBrains/edge-cases/${EXAMPLE_COMMIT}`;
+  const paths = [
+    '.agents/skills/mps-tests/SKILL.md',
+    '.claude/skills/mps-tests/SKILL.md',
+    'agent/skills/writing-lint-checks/SKILL.md',
+    'plugins/mcp-tools/resources/jetbrains/mps/skills/mps-aspect-generator/SKILL.md',
+    'integration-tests/src/jvmTest/resources/skills/weather-retrieval/SKILL.md',
+    'fixture/.claude/skills/commits/SKILL.md',
+    '.claude/skills/mps-tests/references/SKILL.md',
+    'SKILL.md',
+  ];
+  return {
+    'https://api.github.com/repos/JetBrains/edge-cases': { status: 200, body: { full_name: 'JetBrains/edge-cases', default_branch: 'main' } },
+    'https://api.github.com/repos/JetBrains/edge-cases/commits/main': { status: 200, body: { sha: EXAMPLE_COMMIT } },
+    [search]: { status: 200, body: { total_count: paths.length, items: paths.map((path) => ({ path })) } },
+    [`${raw}/.agents/skills/mps-tests/SKILL.md`]: {
+      status: 200,
+      body: '---\nname: mps-tests\ndescription: Run the MPS tests. Use before every push.\n---\n',
+    },
+    [`${raw}/agent/skills/writing-lint-checks/SKILL.md`]: {
+      status: 200,
+      body: '---\nname: writing-lint-checks\ndescription: Write a lint check the way this repository does.\n---\n',
+    },
+  };
+}
 
 const github = replay(EXAMPLE);
 

@@ -15,6 +15,7 @@ import { atlas, CLI, EXAMPLE_COMMIT, FIXTURE } from './helpers.ts';
 
 const fixture = await atlas(['scan', FIXTURE]);
 const example = await atlas(['scan', 'github.com/JetBrains/example']);
+const edgeCases = await atlas(['scan', 'https://github.com/JetBrains/edge-cases']);
 
 test('malformed front matter → the directory name, no description and a warning', () => {
   const parsed = parseSkill(readFileSync(join(FIXTURE, '.agents/skills/release-checklist/SKILL.md'), 'utf8'));
@@ -44,16 +45,49 @@ test('./fixture: every skill, sorted by name, linked to its file, with a warning
   assert.equal(
     fixture.stdout,
     [
-      'fixture · 3 skills',
+      'fixture · 4 skills',
       "code-style — Follow the project's code style.",
       `  ${root}/.github/skills/code-style/SKILL.md`,
       'commits — Write commit messages the way this repository does.',
-      `  ${root}/.claude/skills/commits/SKILL.md`,
+      `  ${root}/.agents/skills/commits/SKILL.md`,
+      '  also in .claude/skills/commits/SKILL.md',
       'release-checklist',
       `  ${root}/.agents/skills/release-checklist/SKILL.md`,
+      'writing-lint-checks — Write a lint check the way this repository does.',
+      `  ${root}/agent/skills/writing-lint-checks/SKILL.md`,
     ].join('\n'),
   );
   assert.match(fixture.stderr, /^warning: \.agents\/skills\/release-checklist\/SKILL\.md: malformed front matter: /);
+});
+
+test('./fixture: the same skill in .agents and .claude → one skill, linked to .agents, with its copy', () => {
+  assert.match(fixture.stdout, /^commits — .*\n {2}file:.*\/\.agents\/skills\/commits\/SKILL\.md\n {2}also in \.claude\/skills\/commits\/SKILL\.md$/m);
+  assert.doesNotMatch(fixture.stdout, /\/\.claude\/skills\/commits\//);
+});
+
+test('./fixture: agent/skills is a skill root', () => {
+  assert.match(fixture.stdout, /^ {2}file:.*\/agent\/skills\/writing-lint-checks\/SKILL\.md$/m);
+});
+
+test('./fixture: a SKILL.md in the product or in test data is not a skill, silently', () => {
+  assert.doesNotMatch(fixture.stdout, /aspect-generator|weather-retrieval/);
+  assert.doesNotMatch(fixture.stderr, /aspect-generator|weather-retrieval/);
+});
+
+test('GitHub: only the main copies of skills in skill roots, read; the product, test data and nested roots left out', () => {
+  assert.equal(edgeCases.code, 0, edgeCases.stderr);
+  assert.equal(edgeCases.stderr, '');
+  assert.equal(
+    edgeCases.stdout,
+    [
+      'JetBrains/edge-cases · 2 skills',
+      'mps-tests — Run the MPS tests.',
+      `  https://github.com/JetBrains/edge-cases/blob/${EXAMPLE_COMMIT}/.agents/skills/mps-tests/SKILL.md`,
+      '  also in .claude/skills/mps-tests/SKILL.md',
+      'writing-lint-checks — Write a lint check the way this repository does.',
+      `  https://github.com/JetBrains/edge-cases/blob/${EXAMPLE_COMMIT}/agent/skills/writing-lint-checks/SKILL.md`,
+    ].join('\n'),
+  );
 });
 
 test('the CLI prints the result at once and stores nothing', (t) => {
