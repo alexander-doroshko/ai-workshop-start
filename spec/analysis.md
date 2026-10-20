@@ -11,3 +11,9 @@ Skill: id = `repo:path`, name, description, commit, the SKILL.md text
 - Anywhere else, *not* a skill, silently: part of the **product** (`plugins/…/resources/…`), **test data** (`src/jvmTest/resources/…`), a nested root (`fixture/.claude/skills/…`)
 - The same directory name in several roots → **one skill**, the others its *copies*; contents not compared
 - The main copy: the first root in the list above
+## Details
+- **GitHub API**, no clone; *under 5 s* for intellij-community
+- The name: front matter, else the directory
+- The link pins the *scanned commit*
+- Malformed front matter → a *warning*, the scan goes on
+- Unreachable repository → a clear message, exit code 1

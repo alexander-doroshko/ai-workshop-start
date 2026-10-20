@@ -36,69 +36,9 @@
   <ul id="skills" role="listbox" aria-label="Skills"></ul>
   <section id="skill" aria-live="polite"></section>
 </main>
-<script>
-  const form = document.getElementById('scan');
-  const input = document.getElementById('repo');
-  const button = form.querySelector('button');
-  const status = document.getElementById('status');
-  const list = document.getElementById('skills');
-  const view = document.getElementById('skill');
-
-  function setStatus(text, error = false) {
-    status.textContent = text;
-    status.classList.toggle('error', error);
-  }
-
-  function show(skill, item) {
-    for (const other of list.children) other.setAttribute('aria-selected', String(other === item));
-    const link = document.createElement('a');
-    link.href = link.textContent = skill.link;
-    link.target = '_blank';
-    const text = document.createElement('pre');
-    text.textContent = skill.text;
-    view.replaceChildren(link);
-    if (skill.copies.length > 0) {
-      const copies = document.createElement('div');
-      copies.className = 'copies';
-      copies.textContent = `also in ${skill.copies.join(', ')}`;
-      view.append(copies);
-    }
-    view.append(text);
-  }
-
-  form.addEventListener('submit', async (event) => {
-    event.preventDefault();
-    list.replaceChildren();
-    view.replaceChildren();
-    button.disabled = true;
-    setStatus('Scanning…');
-    try {
-      const response = await fetch(`/api/scan?repo=${encodeURIComponent(input.value)}`);
-      const result = await response.json();
-      if (!response.ok) return setStatus(result.error, true);
-      const { repository, skills, warnings } = result;
-      const lines = [`${repository.id} · ${skills.length} ${skills.length === 1 ? 'skill' : 'skills'}`];
-      setStatus([...lines, ...warnings.map((warning) => `warning: ${warning}`)].join('\n'));
-      for (const skill of skills) {
-        const item = document.createElement('li');
-        item.setAttribute('role', 'option');
-        item.title = skill.path;
-        const name = document.createElement('div');
-        name.className = 'name';
-        name.textContent = skill.name;
-        const description = document.createElement('div');
-        description.className = 'description';
-        description.textContent = skill.description;
-        item.append(name, description);
-        item.addEventListener('click', () => show(skill, item));
-        list.append(item);
-      }
-    } catch (error) {
-      setStatus(`Cannot reach the Skill Atlas server: ${error.message}`, true);
-    } finally {
-      button.disabled = false;
-    }
-  });
+<script type="module">
+  import { start } from './page.js';
+  start(document, (repo) => fetch(`/api/scan?repo=${encodeURIComponent(repo)}`));
 </script>
 </body>
 </html>

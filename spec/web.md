@@ -1,6 +1,7 @@
 # Web view
 `./skill-atlas serve [--port <port>]`: a page on **localhost** (port 4173 by default).
-Scans the same inputs as the CLI; *nothing is stored*.
+Scans the same inputs as the CLI; *nothing is stored*. Listed by `help`; the browser terminal: *Node CLI only*.
+- Only for a Host of `127.0.0.1:<port>` or `localhost:<port>`; any other → **403** (DNS rebinding)
 ## Page
 - A field for the repository, the **Scan** button to its right
 - On the left, the skills, sorted by **name**, each with its description
