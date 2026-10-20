@@ -8,6 +8,9 @@
  * @typedef {(repo: string) => Promise<{ ok: boolean, json(): Promise<unknown> }>} Scan
  */
 
+/** The longest description the list shows in full; a longer one is cut to it, with `...`. */
+const DESCRIPTION_LIMIT = 300;
+
 /**
  * Wires the page in `document` to `scan`; the browser passes a fetch of `/api/scan`.
  * @param {Document} document
@@ -41,13 +44,14 @@ export function start(document, scan) {
   }
 
   /**
-   * A description in the list: over 200 characters, its first 200 and `...`, the full one on hover.
+   * A description in the list: over DESCRIPTION_LIMIT characters, its first DESCRIPTION_LIMIT and `...`,
+   * the full one on hover.
    * @param {string} text
    */
   function description(text) {
     const characters = Array.from(text);
-    if (characters.length <= 200) return element('div', 'description', text);
-    const shortened = element('div', 'description', `${characters.slice(0, 200).join('')}...`);
+    if (characters.length <= DESCRIPTION_LIMIT) return element('div', 'description', text);
+    const shortened = element('div', 'description', `${characters.slice(0, DESCRIPTION_LIMIT).join('')}...`);
     shortened.title = text;
     return shortened;
   }

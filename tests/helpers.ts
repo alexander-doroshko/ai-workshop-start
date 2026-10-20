@@ -11,8 +11,8 @@ export const CLI = fileURLToPath(new URL('../src/cli.ts', import.meta.url));
 /** The commit GitHub answers for JetBrains/example. */
 export const EXAMPLE_COMMIT = '5ab6270ab772d113e8ad52ebfcaa0109c522ae00';
 
-/** The description of `long` in JetBrains/long-descriptions: 204 characters, ending in "the end". */
-export const LONG_DESCRIPTION = `Builds ${'abcdefghij'.repeat(19)}the end`;
+/** The description of `long` in JetBrains/long-descriptions: 304 characters, ending in "the end". */
+export const LONG_DESCRIPTION = `Builds ${'abcdefghij'.repeat(29)}the end`;
 
 /** What GitHub answers for a small repository, JetBrains/example, with one skill. */
 const EXAMPLE: Recording = {
@@ -62,7 +62,7 @@ function EDGE_CASES(): Recording {
   };
 }
 
-/** JetBrains/long-descriptions: `fits`, with the first 200 characters of `long`, and `long`. */
+/** JetBrains/long-descriptions: `fits`, with the first 300 characters of `long`, and `long`. */
 function LONG_DESCRIPTIONS(): Recording {
   const raw = `https://raw.githubusercontent.com/JetBrains/long-descriptions/${EXAMPLE_COMMIT}`;
   const skill = (name: string, description: string) => `---\nname: ${name}\ndescription: ${description}\n---\n`;
@@ -73,7 +73,7 @@ function LONG_DESCRIPTIONS(): Recording {
       status: 200,
       body: { total_count: 2, items: [{ path: '.claude/skills/fits/SKILL.md' }, { path: '.claude/skills/long/SKILL.md' }] },
     },
-    [`${raw}/.claude/skills/fits/SKILL.md`]: { status: 200, body: skill('fits', LONG_DESCRIPTION.slice(0, 200)) },
+    [`${raw}/.claude/skills/fits/SKILL.md`]: { status: 200, body: skill('fits', LONG_DESCRIPTION.slice(0, 300)) },
     [`${raw}/.claude/skills/long/SKILL.md`]: { status: 200, body: skill('long', LONG_DESCRIPTION) },
   };
 }
