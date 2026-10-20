@@ -1,5 +1,5 @@
 import { findSkills, type SkillFile } from './find.ts';
-import { sortSkills, type Repository, type Skill } from './model.ts';
+import { sortSkills, type Organization, type Repository, type Skill } from './model.ts';
 import { parseSkill } from './parse.ts';
 
 /** A repository to scan: its files, and how to read them. */
@@ -13,7 +13,25 @@ export type Source = {
   read(path: string): Promise<Uint8Array | undefined>;
 };
 
+/** An organization to scan: the repositories that may have skills, opened; what could not be opened, warned about. */
+export type OrganizationSource = {
+  organization: Organization;
+  /** How many repositories were looked at, those without a SKILL.md included. */
+  scanned: number;
+  sources: Source[];
+  warnings: string[];
+};
+
 export type ScanResult = { repository: Repository; skills: Skill[]; warnings: string[] };
+
+/** The skills of all the repositories, sorted together, and the repositories they are in; each warning names its repository. */
+export type OrganizationResult = {
+  organization: Organization;
+  scanned: number;
+  repositories: Repository[];
+  skills: Skill[];
+  warnings: string[];
+};
 
 /** fetch → find → parse. Nothing is stored: the result is all there is. */
 export async function scan(source: Source): Promise<ScanResult> {
@@ -24,6 +42,21 @@ export async function scan(source: Source): Promise<ScanResult> {
     repository: source.repository,
     skills: sortSkills(results.flatMap((result) => (result.skill ? [result.skill] : []))),
     warnings: [...source.warnings, ...results.flatMap((result) => (result.warning ? [result.warning] : []))],
+  };
+}
+
+/** Every repository scanned at the same time, as `scan` does. */
+export async function scanOrganization(source: OrganizationSource): Promise<OrganizationResult> {
+  const results = await Promise.all(source.sources.map(scan));
+  return {
+    organization: source.organization,
+    scanned: source.scanned,
+    repositories: results.filter((result) => result.skills.length > 0).map((result) => result.repository),
+    skills: sortSkills(results.flatMap((result) => result.skills)),
+    warnings: [
+      ...source.warnings,
+      ...results.flatMap((result) => result.warnings.map((warning) => `${result.repository.id}: ${warning}`)),
+    ],
   };
 }
 

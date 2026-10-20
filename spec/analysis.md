@@ -1,6 +1,6 @@
 # Repository analysis
 ## Input
-A **GitHub repository** URL, or a local directory
+A **GitHub repository** URL, a **GitHub organization** URL (`https://github.com/<organization>`; a user's account too), or a local directory
 ## Output
 Every `SKILL.md`: **name**, **description**, **link**
 ## Architecture
@@ -17,3 +17,8 @@ Skill: id = `repo:path`, name, description, commit, the SKILL.md text
 - The link pins the *scanned commit*
 - Malformed front matter → a *warning*, the scan goes on
 - Unreachable repository → a clear message, exit code 1
+## An organization
+- All its repositories, forks included; each one scanned as above, at its own commit
+- The skills of all of them, each with its repository
+- A repository that cannot be scanned → a *warning*, the scan goes on
+- Unknown organization → a clear message, exit code 1; the rate limit or a rejected token stops the whole scan the same way

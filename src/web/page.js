@@ -3,8 +3,8 @@
 // from outside, so the tests run the same code on the same markup.
 
 /**
- * @typedef {{ name: string, description: string, path: string, link: string, text: string, copies: string[] }} Skill
- * @typedef {{ repository: { id: string }, skills: Skill[], warnings: string[] }} Result
+ * @typedef {{ name: string, description: string, repository: string, path: string, link: string, text: string, copies: string[] }} Skill
+ * @typedef {{ repository?: { id: string }, organization?: { id: string }, repositories?: number, skills: Skill[], warnings: string[] }} Result
  * @typedef {(repo: string) => Promise<{ ok: boolean, json(): Promise<unknown> }>} Scan
  */
 
@@ -69,16 +69,32 @@ export function start(document, scan) {
   /** The list's items with their skills, for the filter. @type {[Element, Skill][]} */
   let items = [];
 
-  /** @param {Result} result */
-  function showResult({ repository, skills, warnings }) {
-    const count = `${repository.id} · ${skills.length} ${skills.length === 1 ? 'skill' : 'skills'}`;
-    setStatus([count, ...warnings.map((warning) => `warning: ${warning}`)].join('\n'));
+  /**
+   * @param {number} n
+   * @param {string} one
+   * @param {string} many
+   */
+  function count(n, one, many) {
+    return `${n} ${n === 1 ? one : many}`;
+  }
+
+  /**
+   * A repository: its id and the skill count. An organization: its id, the repository count and the
+   * skill count, and each skill with its repository.
+   * @param {Result} result
+   */
+  function showResult({ repository, organization, repositories = 0, skills, warnings }) {
+    const scanned = organization ? `${organization.id} · ${count(repositories, 'repository', 'repositories')}` : repository?.id;
+    const counts = `${scanned} · ${count(skills.length, 'skill', 'skills')}`;
+    setStatus([counts, ...warnings.map((warning) => `warning: ${warning}`)].join('\n'));
     for (const skill of skills) {
       const item = document.createElement('li');
       item.setAttribute('role', 'option');
       item.setAttribute('aria-selected', 'false');
       item.title = skill.path;
-      item.append(element('div', 'name', skill.name), element('div', 'description', skill.description));
+      item.append(element('div', 'name', skill.name));
+      if (organization) item.append(element('div', 'repository', skill.repository));
+      item.append(element('div', 'description', skill.description));
       item.addEventListener('click', () => show(skill, item));
       applyFilter(item, skill);
       items.push([item, skill]);

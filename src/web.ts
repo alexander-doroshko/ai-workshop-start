@@ -3,12 +3,12 @@
 import { readFile } from 'node:fs/promises';
 import { createServer, type Server } from 'node:http';
 import { AtlasError } from './core/errors.ts';
-import { skillLink } from './core/model.ts';
-import { scan, type Source } from './core/scan.ts';
+import { skillLink, type Skill } from './core/model.ts';
+import { scan, scanOrganization, type OrganizationSource, type Source } from './core/scan.ts';
 
 export type WebOptions = {
   /** Opens what the user asked to scan, as the CLI does. */
-  open(input: string): Promise<Source>;
+  open(input: string): Promise<Source | OrganizationSource>;
 };
 
 /** What the server answers besides the scan: the page and its script. */
@@ -18,7 +18,8 @@ const FILES: Record<string, { file: URL; type: string }> = {
 };
 
 /**
- * The page at `/`; `GET /api/scan?repo=<GitHub URL | directory>` answers the scan as JSON.
+ * The page at `/`; `GET /api/scan?repo=<GitHub URL | directory>` answers the scan as JSON, an
+ * organization's with all its skills in one list.
  * Only for a Host of 127.0.0.1 or localhost on its own port: another name that resolves to
  * 127.0.0.1 (DNS rebinding) would let any web page read the user's directories and repositories.
  */
@@ -45,7 +46,14 @@ export function createWebServer({ open }: WebOptions): Server {
     const input = url.searchParams.get('repo')?.trim();
     if (!input) return json(400, { error: 'Enter a GitHub URL or a directory' });
     try {
-      const { repository, skills, warnings } = await scan(await open(input));
+      const source = await open(input);
+      if ('sources' in source) {
+        const { organization, repositories, skills, warnings } = await scanOrganization(source);
+        const repository = (skill: Skill) => repositories.find((repository) => repository.id === skill.repository)!;
+        const linked = skills.map((skill) => ({ ...skill, link: skillLink(repository(skill), skill) }));
+        return json(200, { organization, repositories: source.scanned, skills: linked, warnings });
+      }
+      const { repository, skills, warnings } = await scan(source);
       json(200, { repository, skills: skills.map((skill) => ({ ...skill, link: skillLink(repository, skill) })), warnings });
     } catch (error) {
       if (error instanceof AtlasError) json(400, { error: error.message });

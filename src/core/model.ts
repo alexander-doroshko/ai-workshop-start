@@ -1,3 +1,11 @@
+/** A scanned organization, or a user's account: all its repositories. */
+export type Organization = {
+  /** The login, for example `JetBrains`. */
+  id: string;
+  /** `https://github.com/<organization>`. */
+  url: string;
+};
+
 /** A scanned repository. The hierarchy is organization → repository → skill. */
 export type Repository = {
   /** `owner/name`, for example `JetBrains/kotlin`; a local directory's name. */

@@ -13,7 +13,9 @@ build-tools-bump-gradle-api — Bumps the Gradle API version that Kotlin Gradle 
 …
 ```
 
-Set `GITHUB_TOKEN` for a higher GitHub rate limit. `npm test` runs the tests.
+An organization's URL, such as `https://github.com/JetBrains`, scans all its repositories, forks
+included. Set `GITHUB_TOKEN` for a higher GitHub rate limit: one code search then finds the skills of
+the whole organization. `npm test` runs the tests.
 
 - [spec/](spec/): what it does. [AGENTS.md](AGENTS.md): the definition of done.
 - [fixture/](fixture/README.md): a small repository for the tests.
