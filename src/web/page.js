@@ -41,6 +41,18 @@ export function start(document, scan) {
   }
 
   /**
+   * A description in the list: over 200 characters, its first 200 and `...`, the full one on hover.
+   * @param {string} text
+   */
+  function description(text) {
+    const characters = Array.from(text);
+    if (characters.length <= 200) return element('div', 'description', text);
+    const shortened = element('div', 'description', `${characters.slice(0, 200).join('')}...`);
+    shortened.title = text;
+    return shortened;
+  }
+
+  /**
    * The SKILL.md on the right: its pinned link, its copies, its text.
    * @param {Skill} skill
    * @param {Element} item
@@ -78,7 +90,7 @@ export function start(document, scan) {
       item.setAttribute('role', 'option');
       item.setAttribute('aria-selected', 'false');
       item.title = skill.path;
-      item.append(element('div', 'name', skill.name), element('div', 'description', skill.description));
+      item.append(element('div', 'name', skill.name), description(skill.description));
       item.addEventListener('click', () => show(skill, item));
       applyFilter(item, skill);
       items.push([item, skill]);

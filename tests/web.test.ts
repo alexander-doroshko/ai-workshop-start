@@ -12,7 +12,7 @@ import { parseHTML } from 'linkedom';
 import { createBrowserBackend } from '../src/browser.ts';
 import { start } from '../src/web/page.js';
 import { serve } from '../src/web.ts';
-import { atlas, CLI, EXAMPLE_COMMIT, FIXTURE, open } from './helpers.ts';
+import { atlas, CLI, EXAMPLE_COMMIT, FIXTURE, LONG_DESCRIPTION, open } from './helpers.ts';
 
 const { server, url } = await serve({ open, port: 0 });
 after(() => server.close());
@@ -43,6 +43,12 @@ async function page() {
     isError: () => element('status').classList.contains('error'),
     /** The list on the left, as shown: the items the filter hides left out. */
     names: () => items().filter((item) => !item.hasAttribute('hidden')).map((item) => item.querySelector('.name')!.textContent),
+    /** Each description in the list, as shown, and its hover text. */
+    descriptions: () =>
+      items().map((item) => {
+        const description = item.querySelector('.description')!;
+        return { text: description.textContent, hover: description.getAttribute('title') };
+      }),
     /** What the right side shows. */
     view: () => ({
       link: element('skill').querySelector('a')?.getAttribute('href'),
@@ -145,6 +151,21 @@ test('the page: the filter kept for the next scan; a selected skill filtered out
   assert.deepEqual(shown.names(), ['writing-lint-checks']);
   shown.filter('');
   assert.deepEqual(shown.names(), ['code-style', 'commits', 'release-checklist', 'writing-lint-checks']);
+});
+
+test('the page: a description over 200 characters → its first 200 and ..., the full one on hover', async () => {
+  const shown = await page();
+  await shown.scan('https://github.com/JetBrains/long-descriptions');
+  assert.deepEqual(shown.names(), ['fits', 'long']);
+  assert.deepEqual(shown.descriptions(), [
+    { text: LONG_DESCRIPTION.slice(0, 200), hover: null },
+    { text: `${LONG_DESCRIPTION.slice(0, 200)}...`, hover: LONG_DESCRIPTION },
+  ]);
+  shown.filter('THE END');
+  assert.deepEqual(shown.names(), ['long'], 'the filter matches the full description');
+
+  await shown.scan(FIXTURE);
+  assert.ok(shown.descriptions().every(({ text, hover }) => !text.endsWith('...') && hover === null));
 });
 
 test('the page, GitHub: the link pins the scanned commit', async () => {
