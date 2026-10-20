@@ -9,7 +9,7 @@
  */
 
 /** The longest description the list shows in full; a longer one is cut to it, with `...`. */
-const DESCRIPTION_LIMIT = 300;
+const DESCRIPTION_LIMIT = 350;
 
 /**
  * Wires the page in `document` to `scan`; the browser passes a fetch of `/api/scan`.

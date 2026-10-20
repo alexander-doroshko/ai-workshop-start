@@ -153,13 +153,13 @@ test('the page: the filter kept for the next scan; a selected skill filtered out
   assert.deepEqual(shown.names(), ['code-style', 'commits', 'release-checklist', 'writing-lint-checks']);
 });
 
-test('the page: a description over 300 characters → its first 300 and ..., the full one on hover', async () => {
+test('the page: a description over 350 characters → its first 350 and ..., the full one on hover', async () => {
   const shown = await page();
   await shown.scan('https://github.com/JetBrains/long-descriptions');
   assert.deepEqual(shown.names(), ['fits', 'long']);
   assert.deepEqual(shown.descriptions(), [
-    { text: LONG_DESCRIPTION.slice(0, 300), hover: null },
-    { text: `${LONG_DESCRIPTION.slice(0, 300)}...`, hover: LONG_DESCRIPTION },
+    { text: LONG_DESCRIPTION.slice(0, 350), hover: null },
+    { text: `${LONG_DESCRIPTION.slice(0, 350)}...`, hover: LONG_DESCRIPTION },
   ]);
   shown.filter('THE END');
   assert.deepEqual(shown.names(), ['long'], 'the filter matches the full description');
