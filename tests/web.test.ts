@@ -41,8 +41,8 @@ async function page() {
     /** The status line: the repository and the count, then the warnings; or the error. */
     status: () => element('status').textContent,
     isError: () => element('status').classList.contains('error'),
-    /** The list on the left, as shown. */
-    names: () => items().map((item) => item.querySelector('.name')!.textContent),
+    /** The list on the left, as shown: the items the filter hides left out. */
+    names: () => items().filter((item) => !item.hasAttribute('hidden')).map((item) => item.querySelector('.name')!.textContent),
     /** What the right side shows. */
     view: () => ({
       link: element('skill').querySelector('a')?.getAttribute('href'),
@@ -58,6 +58,10 @@ async function page() {
         await new Promise((resolve) => setTimeout(resolve, 1));
       }
     },
+    filter(text: string) {
+      (element('filter') as unknown as { value: string }).value = text;
+      element('filter').dispatchEvent(new window.Event('input'));
+    },
     select(name: string) {
       const item = items().find((item) => item.querySelector('.name')!.textContent === name);
       assert.ok(item, `no ${name} in the list`);
@@ -72,7 +76,7 @@ test('the page: a repository field with the Scan button to its right, the list a
   assert.match(response.headers.get('content-type') ?? '', /^text\/html/);
   const html = await response.text();
   assert.match(html, /<form id="scan">\s*<input id="repo"[^>]*>\s*<button type="submit">Scan<\/button>\s*<\/form>/);
-  assert.match(html, /<ul id="skills"[^>]*><\/ul>\s*<section id="skill"/);
+  assert.match(html, /<input id="filter"[^>]*>\s*<ul id="skills"[^>]*><\/ul>\s*<\/div>\s*<section id="skill"/);
   assert.match(html, /import \{ start \} from '\.\/page\.js'/);
   const script = await fetch(`${url}page.js`);
   assert.match(script.headers.get('content-type') ?? '', /^text\/javascript/);
@@ -110,6 +114,37 @@ test('the page: select a skill → its SKILL.md on the right, with the pinned li
     copies: undefined,
     text: readFileSync(join(FIXTURE, '.github/skills/code-style/SKILL.md'), 'utf8'),
   });
+});
+
+test('the page: the filter above the list, by name or description, ignoring case and spaces', async () => {
+  const shown = await page();
+  await shown.scan(FIXTURE);
+  shown.filter('lint');
+  assert.deepEqual(shown.names(), ['writing-lint-checks']);
+  shown.filter('commit');
+  assert.deepEqual(shown.names(), ['code-style', 'commits'], 'commits by name, code-style by "committing" in its description');
+  shown.filter('  KOTLIN ');
+  assert.deepEqual(shown.names(), ['code-style']);
+  shown.filter('no such skill');
+  assert.deepEqual(shown.names(), []);
+  assert.equal(shown.status().split('\n')[0], 'fixture · 4 skills');
+  shown.filter('');
+  assert.deepEqual(shown.names(), ['code-style', 'commits', 'release-checklist', 'writing-lint-checks']);
+});
+
+test('the page: the filter kept for the next scan; a selected skill filtered out stays on the right', async () => {
+  const shown = await page();
+  await shown.scan(FIXTURE);
+  shown.select('commits');
+  shown.filter('lint');
+  assert.deepEqual(shown.names(), ['writing-lint-checks']);
+  assert.deepEqual(shown.selected(), ['commits']);
+  assert.equal(shown.view().link, `${pathToFileURL(FIXTURE).href}/.agents/skills/commits/SKILL.md`);
+
+  await shown.scan(FIXTURE);
+  assert.deepEqual(shown.names(), ['writing-lint-checks']);
+  shown.filter('');
+  assert.deepEqual(shown.names(), ['code-style', 'commits', 'release-checklist', 'writing-lint-checks']);
 });
 
 test('the page, GitHub: the link pins the scanned commit', async () => {

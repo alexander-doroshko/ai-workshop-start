@@ -14,7 +14,9 @@
   #status { padding: 6px 12px; color: var(--muted); border-bottom: 1px solid var(--line); white-space: pre-wrap; }
   #status.error { color: #dc2626; }
   main { flex: 1; display: flex; min-height: 0; }
-  #skills { width: 320px; margin: 0; padding: 0; list-style: none; overflow: auto; border-right: 1px solid var(--line); }
+  #list { width: 320px; display: flex; flex-direction: column; border-right: 1px solid var(--line); }
+  #filter { margin: 8px 12px; padding: 4px 8px; font: inherit; }
+  #skills { flex: 1; margin: 0; padding: 0; list-style: none; overflow: auto; border-top: 1px solid var(--line); }
   #skills li { padding: 8px 12px; cursor: pointer; border-bottom: 1px solid var(--line); }
   #skills li:hover { background: #8881; }
   #skills li[aria-selected="true"] { background: color-mix(in srgb, var(--accent) 20%, transparent); }
@@ -33,7 +35,10 @@
 </form>
 <div id="status">Enter a repository and press Scan.</div>
 <main>
-  <ul id="skills" role="listbox" aria-label="Skills"></ul>
+  <div id="list">
+    <input id="filter" type="search" placeholder="Filter by name or description" aria-label="Filter skills">
+    <ul id="skills" role="listbox" aria-label="Skills"></ul>
+  </div>
   <section id="skill" aria-live="polite"></section>
 </main>
 <script type="module">
