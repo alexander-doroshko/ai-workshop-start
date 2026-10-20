@@ -1,6 +1,6 @@
 // The page's behaviour, in plain JavaScript for the browser: scan on submit, the skills on the
-// left, the selected SKILL.md on the right. The document and the scan come in from outside, so
-// the tests run the same code on the same markup.
+// left under their filter, the selected SKILL.md on the right. The document and the scan come in
+// from outside, so the tests run the same code on the same markup.
 
 /**
  * @typedef {{ name: string, description: string, path: string, link: string, text: string, copies: string[] }} Skill
@@ -18,6 +18,7 @@ export function start(document, scan) {
   const input = /** @type {HTMLInputElement} */ (document.getElementById('repo'));
   const button = /** @type {HTMLButtonElement} */ (form.querySelector('button'));
   const status = /** @type {HTMLElement} */ (document.getElementById('status'));
+  const filter = /** @type {HTMLInputElement} */ (document.getElementById('filter'));
   const list = /** @type {HTMLElement} */ (document.getElementById('skills'));
   const view = /** @type {HTMLElement} */ (document.getElementById('skill'));
 
@@ -54,6 +55,20 @@ export function start(document, scan) {
     view.append(element('pre', 'text', skill.text));
   }
 
+  /**
+   * Hides the skills whose name and description both miss the filter's text, ignoring case.
+   * @param {Element} item
+   * @param {Skill} skill
+   */
+  function applyFilter(item, skill) {
+    const text = filter.value.trim().toLowerCase();
+    const matches = [skill.name, skill.description].some((field) => field.toLowerCase().includes(text));
+    item.toggleAttribute('hidden', !matches);
+  }
+
+  /** The list's items with their skills, for the filter. @type {[Element, Skill][]} */
+  let items = [];
+
   /** @param {Result} result */
   function showResult({ repository, skills, warnings }) {
     const count = `${repository.id} · ${skills.length} ${skills.length === 1 ? 'skill' : 'skills'}`;
@@ -65,13 +80,20 @@ export function start(document, scan) {
       item.title = skill.path;
       item.append(element('div', 'name', skill.name), element('div', 'description', skill.description));
       item.addEventListener('click', () => show(skill, item));
+      applyFilter(item, skill);
+      items.push([item, skill]);
       list.append(item);
     }
   }
 
+  filter.addEventListener('input', () => {
+    for (const [item, skill] of items) applyFilter(item, skill);
+  });
+
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
     list.replaceChildren();
+    items = [];
     view.replaceChildren();
     button.disabled = true;
     setStatus('Scanning…');

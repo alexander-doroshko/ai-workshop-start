@@ -5,6 +5,8 @@ Scans the same inputs as the CLI; *nothing is stored*. Listed by `help`; the bro
 ## Page
 - A field for the repository, the **Scan** button to its right
 - On the left, the skills, sorted by **name**, each with its description
+- Above them, a **filter** field: shows only the skills whose name *or* description contains its text, ignoring case and surrounding spaces; empty → all
+- The filter is kept for the next scan; a selected skill filtered out stays on the right
 - Select one → its **SKILL.md** on the right, with the pinned link and `also in <paths>` for copies
 - The skills of [analysis.md](analysis.md#a-project-skill): a skill in several roots is *one item*
 - The repository and the skill count above; warnings *under them*, the scan goes on
