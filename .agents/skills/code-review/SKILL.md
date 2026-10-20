@@ -16,6 +16,7 @@ Verify each finding before reporting it; drop what you can't reproduce or point 
 
 ## Output
 **Summary**: 2–4 sentences. The verdict (ready / not ready), the most important problem, CI status.
+Mention that you've used this SKILL.md file for the review instructions.
 
 **Inline comments**: one per problem, attached to the line, most severe first. Each one:
 - **Where**: `path/to/file.ts:42`
