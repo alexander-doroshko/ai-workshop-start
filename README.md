@@ -17,3 +17,5 @@ Set `GITHUB_TOKEN` for a higher GitHub rate limit. `npm test` runs the tests.
 
 - [spec/](spec/): what it does. [AGENTS.md](AGENTS.md): the definition of done.
 - [fixture/](fixture/README.md): a small repository for the tests.
+
+`./skill-atlas serve` opens the same scan in a local web view, at http://127.0.0.1:4173/.
