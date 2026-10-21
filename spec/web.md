@@ -6,6 +6,9 @@ Scans the same inputs as the CLI; *nothing is stored*. Listed by `help`; the bro
 - A field for the repository, the **Scan** button to its right
 - On the left, the skills, sorted by **name**, each with its description
 - Above them, a **filter** field: shows only the skills whose name *or* description contains its text, ignoring case and surrounding spaces; empty → all
+- The filter's text **highlighted** in each name and description it shows
+- Under the filter, while it has text and there is a list: `<shown> of <total> skills`; nothing matches → `No skills match "<text>"`
+- **Escape** in the filter clears it
 - The filter is kept for the next scan; a selected skill filtered out stays on the right
 - Select one → its **SKILL.md** on the right, with the pinned link and `also in <paths>` for copies
 - The skills of [analysis.md](analysis.md#a-project-skill): a skill in several roots is *one item*

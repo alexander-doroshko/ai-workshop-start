@@ -49,6 +49,20 @@ async function page() {
       copies: element('skill').querySelector('.copies')?.textContent,
       text: element('skill').querySelector('pre')?.textContent,
     }),
+    /** The shown items' names and descriptions, the highlighted text in [brackets]. */
+    marked: () =>
+      items()
+        .filter((item) => !item.hasAttribute('hidden'))
+        .map((item) =>
+          ['.name', '.description'].map((field) =>
+            [...item.querySelector(field)!.childNodes]
+              .map((node) => (node.nodeName === 'MARK' ? `[${node.textContent}]` : node.textContent))
+              .join(''),
+          ),
+        ),
+    filterText: () => (element('filter') as unknown as { value: string }).value,
+    /** The line under the filter. */
+    matches: () => ({ text: element('matches').textContent, hidden: element('matches').hasAttribute('hidden') }),
     selected: () => items().filter((item) => item.getAttribute('aria-selected') === 'true').map((item) => item.querySelector('.name')!.textContent),
     async scan(repo: string) {
       (element('repo') as unknown as { value: string }).value = repo;
@@ -61,6 +75,10 @@ async function page() {
     filter(text: string) {
       (element('filter') as unknown as { value: string }).value = text;
       element('filter').dispatchEvent(new window.Event('input'));
+    },
+    press(key: string) {
+      // linkedom has no KeyboardEvent: a plain event with its key.
+      element('filter').dispatchEvent(Object.assign(new window.Event('keydown'), { key }));
     },
     select(name: string) {
       const item = items().find((item) => item.querySelector('.name')!.textContent === name);
@@ -76,7 +94,7 @@ test('the page: a repository field with the Scan button to its right, the list a
   assert.match(response.headers.get('content-type') ?? '', /^text\/html/);
   const html = await response.text();
   assert.match(html, /<form id="scan">\s*<input id="repo"[^>]*>\s*<button type="submit">Scan<\/button>\s*<\/form>/);
-  assert.match(html, /<input id="filter"[^>]*>\s*<ul id="skills"[^>]*><\/ul>\s*<\/div>\s*<section id="skill"/);
+  assert.match(html, /<input id="filter"[^>]*>\s*<div id="matches"[^>]*><\/div>\s*<ul id="skills"[^>]*><\/ul>\s*<\/div>\s*<section id="skill"/);
   assert.match(html, /import \{ start \} from '\.\/page\.js'/);
   const script = await fetch(`${url}page.js`);
   assert.match(script.headers.get('content-type') ?? '', /^text\/javascript/);
@@ -132,6 +150,61 @@ test('the page: the filter above the list, by name or description, ignoring case
   assert.deepEqual(shown.names(), ['code-style', 'commits', 'release-checklist', 'writing-lint-checks']);
 });
 
+test('the page: the filter text highlighted in the names and descriptions it shows, in their own case', async () => {
+  const shown = await page();
+  await shown.scan(FIXTURE);
+  assert.deepEqual(shown.marked(), [
+    ['code-style', "Follow the project's code style. Use before committing Kotlin or Java changes."],
+    ['commits', 'Write commit messages the way this repository does. Use for every commit.'],
+    ['release-checklist', ''],
+    ['writing-lint-checks', 'Write a lint check the way this repository does. Use when adding or changing a check.'],
+  ]);
+  shown.filter(' COMMIT ');
+  assert.deepEqual(shown.marked(), [
+    ['code-style', "Follow the project's code style. Use before [commit]ting Kotlin or Java changes."],
+    ['[commit]s', 'Write [commit] messages the way this repository does. Use for every [commit].'],
+  ]);
+  shown.filter('<b>');
+  assert.deepEqual(shown.marked(), []);
+  shown.filter('');
+  assert.equal(shown.marked()[0][1], "Follow the project's code style. Use before committing Kotlin or Java changes.");
+});
+
+test('the page: under the filter, how many skills it shows; nothing matches → a message; empty → nothing', async () => {
+  const shown = await page();
+  shown.filter('commit');
+  assert.deepEqual(shown.matches(), { text: '', hidden: true }, 'no list yet');
+  shown.filter('');
+  await shown.scan(FIXTURE);
+  assert.deepEqual(shown.matches(), { text: '', hidden: true });
+  shown.filter('commit');
+  assert.deepEqual(shown.matches(), { text: '2 of 4 skills', hidden: false });
+  shown.filter('lint');
+  assert.deepEqual(shown.matches(), { text: '1 of 4 skills', hidden: false });
+  shown.filter('  no such skill ');
+  assert.deepEqual(shown.matches(), { text: 'No skills match "no such skill"', hidden: false });
+  shown.filter('   ');
+  assert.deepEqual(shown.matches(), { text: '', hidden: true });
+  assert.equal(shown.names().length, 4);
+
+  shown.filter('commit');
+  await shown.scan(join(FIXTURE, 'no-such-directory'));
+  assert.deepEqual(shown.matches(), { text: '', hidden: true }, 'no list after a failed scan');
+});
+
+test('the page: Escape in the filter clears it', async () => {
+  const shown = await page();
+  await shown.scan(FIXTURE);
+  shown.filter('lint');
+  shown.press('a');
+  assert.deepEqual(shown.names(), ['writing-lint-checks']);
+  shown.press('Escape');
+  assert.equal(shown.filterText(), '');
+  assert.deepEqual(shown.names(), ['code-style', 'commits', 'release-checklist', 'writing-lint-checks']);
+  assert.deepEqual(shown.matches(), { text: '', hidden: true });
+  assert.equal(shown.marked()[1][0], 'commits');
+});
+
 test('the page: the filter kept for the next scan; a selected skill filtered out stays on the right', async () => {
   const shown = await page();
   await shown.scan(FIXTURE);
@@ -143,6 +216,8 @@ test('the page: the filter kept for the next scan; a selected skill filtered out
 
   await shown.scan(FIXTURE);
   assert.deepEqual(shown.names(), ['writing-lint-checks']);
+  assert.deepEqual(shown.marked(), [['writing-[lint]-checks', 'Write a [lint] check the way this repository does. Use when adding or changing a check.']]);
+  assert.deepEqual(shown.matches(), { text: '1 of 4 skills', hidden: false });
   shown.filter('');
   assert.deepEqual(shown.names(), ['code-style', 'commits', 'release-checklist', 'writing-lint-checks']);
 });
