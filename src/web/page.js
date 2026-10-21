@@ -8,6 +8,9 @@
  * @typedef {(repo: string) => Promise<{ ok: boolean, json(): Promise<unknown> }>} Scan
  */
 
+/** The longest description the list shows in full; a longer one is cut to it, with `...`. */
+const DESCRIPTION_LIMIT = 350;
+
 /**
  * Wires the page in `document` to `scan`; the browser passes a fetch of `/api/scan`.
  * @param {Document} document
@@ -38,6 +41,19 @@ export function start(document, scan) {
     element.className = className;
     element.textContent = text;
     return element;
+  }
+
+  /**
+   * A description in the list: over DESCRIPTION_LIMIT characters, its first DESCRIPTION_LIMIT and `...`,
+   * the full one on hover.
+   * @param {string} text
+   */
+  function description(text) {
+    const characters = Array.from(text);
+    if (characters.length <= DESCRIPTION_LIMIT) return element('div', 'description', text);
+    const shortened = element('div', 'description', `${characters.slice(0, DESCRIPTION_LIMIT).join('')}...`);
+    shortened.title = text;
+    return shortened;
   }
 
   /**
@@ -78,7 +94,7 @@ export function start(document, scan) {
       item.setAttribute('role', 'option');
       item.setAttribute('aria-selected', 'false');
       item.title = skill.path;
-      item.append(element('div', 'name', skill.name), element('div', 'description', skill.description));
+      item.append(element('div', 'name', skill.name), description(skill.description));
       item.addEventListener('click', () => show(skill, item));
       applyFilter(item, skill);
       items.push([item, skill]);
