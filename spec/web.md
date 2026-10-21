@@ -8,6 +8,9 @@ Scans the same inputs as the CLI; *nothing is stored*. Listed by `help`; the bro
 - Above them, a **filter** field: shows only the skills whose name *or* description contains its text, ignoring case and surrounding spaces; empty → all
 - The filter is kept for the next scan; a selected skill filtered out stays on the right
 - Select one → its **SKILL.md** on the right, with the pinned link and `also in <paths>` for copies
+- Select by click, or by keyboard: the list is *one Tab stop* (the selected skill if shown, else the first shown);
+  **↑/↓** move between the shown skills, **Home/End** to the first/last, **Enter** or **Space** selects;
+  **↓** in the filter goes to the first shown skill
 - The skills of [analysis.md](analysis.md#a-project-skill): a skill in several roots is *one item*
 - The repository and the skill count above; warnings *under them*, the scan goes on
 - Unreachable repository → the CLI's message, *no list*

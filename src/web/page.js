@@ -1,6 +1,6 @@
 // The page's behaviour, in plain JavaScript for the browser: scan on submit, the skills on the
-// left under their filter, the selected SKILL.md on the right. The document and the scan come in
-// from outside, so the tests run the same code on the same markup.
+// left under their filter, the selected SKILL.md on the right, by mouse or keyboard. The document
+// and the scan come in from outside, so the tests run the same code on the same markup.
 
 /**
  * @typedef {{ name: string, description: string, path: string, link: string, text: string, copies: string[] }} Skill
@@ -47,6 +47,7 @@ export function start(document, scan) {
    */
   function show(skill, item) {
     for (const other of Array.from(list.children)) other.setAttribute('aria-selected', String(other === item));
+    setTabStop(item);
     const link = /** @type {HTMLAnchorElement} */ (element('a', 'link', skill.link));
     link.href = skill.link;
     link.target = '_blank';
@@ -69,6 +70,46 @@ export function start(document, scan) {
   /** The list's items with their skills, for the filter. @type {[Element, Skill][]} */
   let items = [];
 
+  /** The items the filter shows, in order. */
+  function shown() {
+    return items.map(([item]) => item).filter((item) => !item.hasAttribute('hidden'));
+  }
+
+  /**
+   * The list is one Tab stop: `item`, or else the selected skill if shown, or else the first shown.
+   * @param {Element} [item]
+   */
+  function setTabStop(item) {
+    const visible = shown();
+    const stop = item ?? visible.find((other) => other.getAttribute('aria-selected') === 'true') ?? visible[0];
+    for (const [other] of items) other.setAttribute('tabindex', other === stop ? '0' : '-1');
+  }
+
+  /** @param {Element | undefined} item */
+  function focus(item) {
+    if (!item) return;
+    setTabStop(item);
+    /** @type {HTMLElement} */ (item).focus();
+  }
+
+  /**
+   * ↑/↓ and Home/End move between the shown skills; Enter or Space selects.
+   * @param {KeyboardEvent} event
+   * @param {Element} item
+   * @param {Skill} skill
+   */
+  function onKey(event, item, skill) {
+    const visible = shown();
+    const index = visible.indexOf(item);
+    if (event.key === 'ArrowDown') focus(visible[index + 1]);
+    else if (event.key === 'ArrowUp') focus(visible[index - 1]);
+    else if (event.key === 'Home') focus(visible[0]);
+    else if (event.key === 'End') focus(visible[visible.length - 1]);
+    else if (event.key === 'Enter' || event.key === ' ') show(skill, item);
+    else return;
+    event.preventDefault();
+  }
+
   /** @param {Result} result */
   function showResult({ repository, skills, warnings }) {
     const count = `${repository.id} · ${skills.length} ${skills.length === 1 ? 'skill' : 'skills'}`;
@@ -80,14 +121,23 @@ export function start(document, scan) {
       item.title = skill.path;
       item.append(element('div', 'name', skill.name), element('div', 'description', skill.description));
       item.addEventListener('click', () => show(skill, item));
+      item.addEventListener('keydown', (event) => onKey(/** @type {KeyboardEvent} */ (event), item, skill));
       applyFilter(item, skill);
       items.push([item, skill]);
       list.append(item);
     }
+    setTabStop();
   }
 
   filter.addEventListener('input', () => {
     for (const [item, skill] of items) applyFilter(item, skill);
+    setTabStop();
+  });
+
+  filter.addEventListener('keydown', (event) => {
+    if (event.key !== 'ArrowDown' || shown().length === 0) return;
+    event.preventDefault();
+    focus(shown()[0]);
   });
 
   form.addEventListener('submit', async (event) => {
