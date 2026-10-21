@@ -67,6 +67,19 @@ async function page() {
       assert.ok(item, `no ${name} in the list`);
       item.dispatchEvent(new window.Event('click'));
     },
+    /** The list's one Tab stop: the item with `tabindex="0"`; the others are `-1`. */
+    tabStop: () => {
+      assert.ok(items().every((item) => ['0', '-1'].includes(item.getAttribute('tabindex') ?? '')), 'every item focusable');
+      return items().filter((item) => item.getAttribute('tabindex') === '0').map((item) => item.querySelector('.name')!.textContent);
+    },
+    /** Presses `key` on the list's Tab stop, or on the filter; true if the page handled it. */
+    press(key: string, on: 'list' | 'filter' = 'list') {
+      const target = on === 'filter' ? element('filter') : document.querySelector('#skills li[tabindex="0"]');
+      assert.ok(target, 'nothing to press on');
+      const event = Object.assign(new window.Event('keydown', { bubbles: true, cancelable: true }), { key });
+      target.dispatchEvent(event);
+      return event.defaultPrevented;
+    },
   };
 }
 
@@ -114,6 +127,65 @@ test('the page: select a skill → its SKILL.md on the right, with the pinned li
     copies: undefined,
     text: readFileSync(join(FIXTURE, '.github/skills/code-style/SKILL.md'), 'utf8'),
   });
+});
+
+test('the page, keyboard: the list is one Tab stop; ↑/↓, Home/End move; Enter or Space selects', async () => {
+  const shown = await page();
+  await shown.scan(FIXTURE);
+  assert.deepEqual(shown.tabStop(), ['code-style'], 'nothing selected → the first skill');
+  assert.equal(shown.press('ArrowUp'), true);
+  assert.deepEqual(shown.tabStop(), ['code-style'], 'already the first');
+  shown.press('ArrowDown');
+  assert.deepEqual(shown.tabStop(), ['commits']);
+  assert.deepEqual(shown.selected(), [], 'moving does not select');
+  assert.deepEqual(shown.view(), { link: undefined, copies: undefined, text: undefined });
+
+  assert.equal(shown.press('Enter'), true);
+  assert.deepEqual(shown.selected(), ['commits']);
+  assert.deepEqual(shown.view(), {
+    link: `${pathToFileURL(FIXTURE).href}/.agents/skills/commits/SKILL.md`,
+    copies: 'also in .claude/skills/commits/SKILL.md',
+    text: readFileSync(join(FIXTURE, '.agents/skills/commits/SKILL.md'), 'utf8'),
+  });
+
+  shown.press('End');
+  assert.deepEqual(shown.tabStop(), ['writing-lint-checks']);
+  shown.press('ArrowDown');
+  assert.deepEqual(shown.tabStop(), ['writing-lint-checks'], 'already the last');
+  assert.equal(shown.press(' '), true);
+  assert.deepEqual(shown.selected(), ['writing-lint-checks']);
+  assert.equal(shown.view().link, `${pathToFileURL(FIXTURE).href}/agent/skills/writing-lint-checks/SKILL.md`);
+  shown.press('Home');
+  assert.deepEqual(shown.tabStop(), ['code-style']);
+  assert.equal(shown.press('a'), false, 'other keys left to the browser');
+
+  shown.select('release-checklist');
+  assert.deepEqual(shown.tabStop(), ['release-checklist'], 'a click moves the Tab stop too');
+});
+
+test('the page, keyboard: only the shown skills; ↓ in the filter goes to the first shown', async () => {
+  const shown = await page();
+  await shown.scan(FIXTURE);
+  shown.select('release-checklist');
+  shown.filter('commit');
+  assert.deepEqual(shown.tabStop(), ['code-style'], 'the selected skill hidden → the first shown');
+  shown.press('ArrowDown');
+  assert.deepEqual(shown.tabStop(), ['commits']);
+  shown.press('ArrowDown');
+  assert.deepEqual(shown.tabStop(), ['commits'], 'release-checklist and writing-lint-checks are hidden');
+  shown.press('Enter');
+  assert.deepEqual(shown.selected(), ['commits']);
+
+  shown.filter('lint');
+  assert.equal(shown.press('ArrowDown', 'filter'), true);
+  assert.deepEqual(shown.tabStop(), ['writing-lint-checks']);
+  shown.press('Enter');
+  assert.deepEqual(shown.selected(), ['writing-lint-checks']);
+  shown.filter('');
+  assert.deepEqual(shown.tabStop(), ['writing-lint-checks'], 'the selected skill shown → it');
+
+  shown.filter('no such skill');
+  assert.equal(shown.press('ArrowDown', 'filter'), false, 'nothing shown → the filter keeps the key');
 });
 
 test('the page: the filter above the list, by name or description, ignoring case and spaces', async () => {
