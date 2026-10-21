@@ -49,6 +49,17 @@ async function page() {
       copies: element('skill').querySelector('.copies')?.textContent,
       text: element('skill').querySelector('pre')?.textContent,
     }),
+    /** The shown items' names and descriptions, each highlighted part in [brackets]. */
+    marked: () =>
+      items()
+        .filter((item) => !item.hasAttribute('hidden'))
+        .map((item) =>
+          ['.name', '.description'].map((field) =>
+            [...item.querySelector(field)!.childNodes]
+              .map((node) => (node.nodeName === 'MARK' ? `[${node.textContent}]` : node.textContent))
+              .join(''),
+          ),
+        ),
     selected: () => items().filter((item) => item.getAttribute('aria-selected') === 'true').map((item) => item.querySelector('.name')!.textContent),
     async scan(repo: string) {
       (element('repo') as unknown as { value: string }).value = repo;
@@ -130,6 +141,29 @@ test('the page: the filter above the list, by name or description, ignoring case
   assert.equal(shown.status().split('\n')[0], 'fixture · 4 skills');
   shown.filter('');
   assert.deepEqual(shown.names(), ['code-style', 'commits', 'release-checklist', 'writing-lint-checks']);
+});
+
+test('the page: the filter text highlighted in the names and descriptions it shows, in their own case', async () => {
+  const shown = await page();
+  await shown.scan(FIXTURE);
+  assert.deepEqual(shown.marked(), [
+    ['code-style', "Follow the project's code style. Use before committing Kotlin or Java changes."],
+    ['commits', 'Write commit messages the way this repository does. Use for every commit.'],
+    ['release-checklist', ''],
+    ['writing-lint-checks', 'Write a lint check the way this repository does. Use when adding or changing a check.'],
+  ]);
+  shown.filter(' COMMIT ');
+  assert.deepEqual(shown.marked(), [
+    ['code-style', "Follow the project's code style. Use before [commit]ting Kotlin or Java changes."],
+    ['[commit]s', 'Write [commit] messages the way this repository does. Use for every [commit].'],
+  ]);
+  shown.filter('kotlin');
+  assert.deepEqual(shown.marked(), [['code-style', "Follow the project's code style. Use before committing [Kotlin] or Java changes."]]);
+
+  await shown.scan(FIXTURE);
+  assert.deepEqual(shown.marked(), [['code-style', "Follow the project's code style. Use before committing [Kotlin] or Java changes."]], 'the kept filter, highlighted after the next scan');
+  shown.filter('');
+  assert.ok(shown.marked().flat().every((text) => !text.includes('[')), 'no marks with an empty filter');
 });
 
 test('the page: the filter kept for the next scan; a selected skill filtered out stays on the right', async () => {

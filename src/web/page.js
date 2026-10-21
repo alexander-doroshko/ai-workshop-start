@@ -56,7 +56,28 @@ export function start(document, scan) {
   }
 
   /**
-   * Hides the skills whose name and description both miss the filter's text, ignoring case.
+   * `text` in `target`, each occurrence of `query` (in lower case) in a `<mark>`; none where lower
+   * case changes the text's length, as the offsets would not match.
+   * @param {Element} target
+   * @param {string} text
+   * @param {string} query
+   */
+  function highlight(target, text, query) {
+    target.replaceChildren();
+    const lower = text.toLowerCase();
+    let start = 0;
+    for (let at = query && lower.length === text.length ? lower.indexOf(query) : -1; at !== -1; at = lower.indexOf(query, start)) {
+      const mark = document.createElement('mark');
+      mark.textContent = text.slice(at, at + query.length);
+      target.append(text.slice(start, at), mark);
+      start = at + query.length;
+    }
+    target.append(text.slice(start));
+  }
+
+  /**
+   * Hides the skills whose name and description both miss the filter's text, ignoring case, and
+   * highlights it in the others.
    * @param {Element} item
    * @param {Skill} skill
    */
@@ -64,6 +85,8 @@ export function start(document, scan) {
     const text = filter.value.trim().toLowerCase();
     const matches = [skill.name, skill.description].some((field) => field.toLowerCase().includes(text));
     item.toggleAttribute('hidden', !matches);
+    highlight(/** @type {Element} */ (item.querySelector('.name')), skill.name, text);
+    highlight(/** @type {Element} */ (item.querySelector('.description')), skill.description, text);
   }
 
   /** The list's items with their skills, for the filter. @type {[Element, Skill][]} */
