@@ -19,6 +19,7 @@ export function start(document, scan) {
   const button = /** @type {HTMLButtonElement} */ (form.querySelector('button'));
   const status = /** @type {HTMLElement} */ (document.getElementById('status'));
   const filter = /** @type {HTMLInputElement} */ (document.getElementById('filter'));
+  const matches = /** @type {HTMLElement} */ (document.getElementById('matches'));
   const list = /** @type {HTMLElement} */ (document.getElementById('skills'));
   const view = /** @type {HTMLElement} */ (document.getElementById('skill'));
 
@@ -56,14 +57,50 @@ export function start(document, scan) {
   }
 
   /**
-   * Hides the skills whose name and description both miss the filter's text, ignoring case.
+   * `text` in `target`, each occurrence of `query` (in lower case) in a `<mark>`; none where lower
+   * case changes the text's length, as the offsets would not match.
+   * @param {Element} target
+   * @param {string} text
+   * @param {string} query
+   */
+  function highlight(target, text, query) {
+    target.replaceChildren();
+    const lower = text.toLowerCase();
+    let start = 0;
+    for (let at = query && lower.length === text.length ? lower.indexOf(query) : -1; at !== -1; at = lower.indexOf(query, start)) {
+      target.append(text.slice(start, at), element('mark', '', text.slice(at, at + query.length)));
+      start = at + query.length;
+    }
+    target.append(text.slice(start));
+  }
+
+  /**
+   * Hides the skills whose name and description both miss the filter's text, ignoring case, and
+   * highlights it in the others.
    * @param {Element} item
    * @param {Skill} skill
    */
   function applyFilter(item, skill) {
     const text = filter.value.trim().toLowerCase();
-    const matches = [skill.name, skill.description].some((field) => field.toLowerCase().includes(text));
-    item.toggleAttribute('hidden', !matches);
+    const found = [skill.name, skill.description].some((field) => field.toLowerCase().includes(text));
+    item.toggleAttribute('hidden', !found);
+    highlight(/** @type {Element} */ (item.querySelector('.name')), skill.name, text);
+    highlight(/** @type {Element} */ (item.querySelector('.description')), skill.description, text);
+  }
+
+  /** Under the filter, while it has text and there is a list: how many skills it shows, or that none match. */
+  function showMatches() {
+    const text = filter.value.trim();
+    const shown = items.filter(([item]) => !item.hasAttribute('hidden')).length;
+    const visible = text !== '' && items.length > 0;
+    matches.textContent = !visible ? '' : shown > 0 ? `${shown} of ${items.length} skills` : `No skills match "${text}"`;
+    matches.toggleAttribute('hidden', !visible);
+  }
+
+  /** Filters the whole list again. */
+  function refilter() {
+    for (const [item, skill] of items) applyFilter(item, skill);
+    showMatches();
   }
 
   /** The list's items with their skills, for the filter. @type {[Element, Skill][]} */
@@ -84,16 +121,21 @@ export function start(document, scan) {
       items.push([item, skill]);
       list.append(item);
     }
+    showMatches();
   }
 
-  filter.addEventListener('input', () => {
-    for (const [item, skill] of items) applyFilter(item, skill);
+  filter.addEventListener('input', refilter);
+  filter.addEventListener('keydown', (event) => {
+    if (event.key !== 'Escape') return;
+    filter.value = '';
+    refilter();
   });
 
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
     list.replaceChildren();
     items = [];
+    showMatches();
     view.replaceChildren();
     button.disabled = true;
     setStatus('Scanning…');
