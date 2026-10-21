@@ -68,9 +68,6 @@ _status-update_
 
 ## 4. Post
 Post the summary to **#test566** with the Slack tools available to you, as one message. Don't post twice: if a message of yours ending with `_status-update_` for the same period is already there, stop.
-If it's over Slack's limit, post the overview and *Needs attention* as the message, and the sections as replies in its thread.
-
-If you have no access to Slack, put the summary in the run's output and say that it wasn't posted.
 
 ## 5. Report
 In the run's output: the period, the counts per section, and the link to the Slack message.
